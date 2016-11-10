@@ -1,11 +1,17 @@
+/**
+ * The ActionController class acts as a finite state
+ * machine for the code 
+ */
+
 package component;
 
 import algorithm.ClawController;
 import lejos.hardware.Button;
 import lejos.hardware.ev3.LocalEV3;
 import lejos.hardware.motor.EV3LargeRegulatedMotor;
+import lejos.utility.TimerListener;
 
-public class ActionController {
+public class ActionController implements TimerListener{
 	private final static EV3LargeRegulatedMotor clawLift = new EV3LargeRegulatedMotor(LocalEV3.get().getPort("A"));
 	private final static EV3LargeRegulatedMotor clawClose = new EV3LargeRegulatedMotor(LocalEV3.get().getPort("B"));
 	
@@ -17,17 +23,9 @@ public class ActionController {
 	
 	public ActionController()
 	{
-		startOdometer();
 		
-		ClawController claw = new ClawController(clawLift, clawClose);
-		
-		claw.grab();
-		claw.lift(CLAW_LIFT_FULL);
-		while(Button.waitForAnyPress() != Button.ID_LEFT);
-		claw.lift(CLAW_LIFT_ONE_BLOCK);
-		claw.release();
-		claw.lift(CLAW_LIFT_ONE_BLOCK - CLAW_LIFT_FULL);
 	}
+	
 	public void getWifiInfo()
 	{
 		
@@ -65,5 +63,21 @@ public class ActionController {
 	public void goToStart()
 	{
 		
+	}
+
+	@Override
+	public void timedOut() {
+		// TODO Auto-generated method stub
+		startOdometer();
+
+		ClawController claw = new ClawController(clawLift, clawClose);
+
+		claw.grab();
+		claw.lift(CLAW_LIFT_FULL);
+		while (Button.waitForAnyPress() != Button.ID_LEFT)
+			;
+		claw.lift(CLAW_LIFT_ONE_BLOCK);
+		claw.release();
+		claw.lift(CLAW_LIFT_ONE_BLOCK - CLAW_LIFT_FULL);
 	}
 }
