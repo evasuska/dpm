@@ -17,7 +17,7 @@ import lejos.hardware.Button;
 public class CompetitionDemo {
 
 	public static void main(String[] args) {
-		// TODO Auto-generated method stub
+		//TODO Print to the LCD. Set up ActionController thread
 		
 		isEnter();
 		ActionController ac = new ActionController();
