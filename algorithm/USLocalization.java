@@ -1,265 +1,117 @@
 /**
- * The USLocaliztion class 
+ * The USLocaliztion class uses the Rising Edge algorithm
+ * with the USS to orient the robot to a zero heading
+ * 
+ * @author Bogdan Dumitru
+ * @author Eric Zimmermann
+ * @author Eva Suska
  */
 
 package algorithm;
 
+import component.ActionController;
 import component.Odometer;
+import component.USPoller;
 import lejos.hardware.motor.EV3LargeRegulatedMotor;
 import lejos.robotics.SampleProvider;
 
 public class USLocalization {
-	public enum LocalizationType { FALLING_EDGE, RISING_EDGE };
+	final static int ROTATE_SPEED = 100, CLIP = 55, WALL_DIST = 50, US_MARGIN = 3;
 
-	//rotation speed
-	public static int ROTATION_SPEED = 30;
+	// for constructor
+	private Odometer odometer;
+	private USPoller usPoller;
 
-	//for constructor
-	private Odometer odo;
-	private Navigation navigation;
-	private SampleProvider usSensor;
-	private float[] usData;
-	private LocalizationType locType;
 	private EV3LargeRegulatedMotor leftMotor;
+
 	private EV3LargeRegulatedMotor rightMotor;
 
 	/**
-	 * Class constructor that specifies the Odometer,
-	 * @param odo
-	 * @param usSensor
-	 * @param usData
-	 * @param locType
-	 * @param leftMotor
-	 * @param rightMotor
+	 * Class Constructor specifying the Odometer and USPoller used
+	 * 
+	 * @param odometer the Odometer object used
+	 * @param usPoller the USPoller object used
 	 */
-	public USLocalization(Odometer odo, SampleProvider usSensor, float[] usData, LocalizationType locType,
-			EV3LargeRegulatedMotor leftMotor, EV3LargeRegulatedMotor rightMotor) {
-		this.odo = odo;
-		this.usSensor = usSensor;
-		this.usData = usData;
-		this.locType = locType;
-		this.leftMotor = leftMotor;
-		this.rightMotor = rightMotor;
+	public USLocalization(Odometer odometer, USPoller usPoller) {
+		
+		this.odometer = odometer;
+		this.usPoller = usPoller;
+		
+		EV3LargeRegulatedMotor[] motors = this.odometer.getMotors();
+		this.leftMotor = motors[0];
+		this.rightMotor = motors[1];
 	}
 
 	/**
-	 * Localize the robot to coordinate (0 , 0)
-	 * with a heading of 0 by using the USPoller
-	 * to detect Rising Edge
+	 * Localize the robot to coordinate (0 , 0) with a heading of 0 by using the
+	 * USPoller to detect Rising Edge
 	 */
 	public void localize() {
-		//TODO Use Eric's code with Bogdan's architecture for this method
-		
-		//array for the position of the robot
-		double [] pos = new double [3];
-		pos[0] = odo.getX();
-		pos[1] = odo.getY();
+		// TODO Use Eric's code with Bogdan's architecture for this method
 
-		//array for setPosition method (it will only update the angle)
-		boolean[] update = {false, false, true};
+		double[] position = new double[3];
+		position[0] = odometer.getX();
+		position[1] = odometer.getY();
 
-		//margin for the distance of wall
-		final int MARGIN = 2;
+		// array for setPosition method (it will only update the angle) given in
+		// lab4
+		boolean[] update = { false, false, true };
+		double cw_angle, ccw_angle;
 
-		double clockwiseAngle;							//first angle
-		double counterClockwiseAngle;					//second angle
+		ActionController.setSpeeds(ROTATE_SPEED, ROTATE_SPEED);
 
-		//set speed to ROTATION_SPEED
-		leftMotor.setSpeed(ROTATION_SPEED);
-		rightMotor.setSpeed(ROTATION_SPEED);
+		while (usPoller.getClippedData(CLIP) == WALL_DIST) {
 
-		//--------------FALLING_EDGE-------------------
-		if (locType == LocalizationType.FALLING_EDGE) {
-
-			// rotate the robot clockwise until it sees no wall
-			while (getFilteredData() < 50){
-				leftMotor.forward();
-				rightMotor.backward();
-			}
-
-			// keep rotating until the robot sees a wall, then latch the angle
-			while(getFilteredData() >= 50 - MARGIN ){
-				leftMotor.forward();
-				rightMotor.backward();
-			}
-
-			//the robot sees the wall, stop
-			if(getFilteredData() < 50){
-				/*
-				 * Stop motor.
-				 * We need to set speed to 0 before stopping the motor
-				 * because stop() doesn't stop both motors at the same time
-				 * and leads to error (testing hardware issue).
-				 */
-				leftMotor.setSpeed(0);
-				rightMotor.setSpeed(0);
-
-				leftMotor.forward();
-				rightMotor.forward();
-
-				leftMotor.stop();
-				rightMotor.stop();
-			}
-
-			//save the first angle
-			clockwiseAngle = odo.getAng();
-
-			//set speed to ROTATION_SPEED
-			leftMotor.setSpeed(ROTATION_SPEED);
-			rightMotor.setSpeed(ROTATION_SPEED);
-
-			// switch direction (counterclockwise) and wait until it sees no wall
-			while(getFilteredData() < 50){
-				leftMotor.backward();
-				rightMotor.forward();
-			}
-
-			// keep rotating until the robot sees a wall, then latch the angle
-			while(getFilteredData() >= 50 - MARGIN){
-				leftMotor.backward();
-				rightMotor.forward();
-			}
-
-			//the robot sees the wall, stop motors
-			if(getFilteredData() < 50){
-				leftMotor.setSpeed(0);
-				rightMotor.setSpeed(0);
-
-				leftMotor.forward();
-				rightMotor.forward();
-
-				leftMotor.stop();
-				rightMotor.stop();
-			}
-
-			//save the second angle
-			counterClockwiseAngle = odo.getAng();
-
-			//set speed to ROTATION_SPEED
-			leftMotor.setSpeed(ROTATION_SPEED);
-			rightMotor.setSpeed(ROTATION_SPEED);
-
-			//determine the new angle (using the formula from the tutorial)
-			if(clockwiseAngle > counterClockwiseAngle)
-			{
-				pos[2] = (odo.getAng() + (225- (clockwiseAngle + counterClockwiseAngle)/2));
-
-			}
-			else{
-				pos[2] = (odo.getAng() + (45- (clockwiseAngle + counterClockwiseAngle)/2));
-			}
-
-			//update the angle
-			odo.setPosition(pos, update);
-
-			//turn to 0 degrees
-			navigation.turnTo(0);
-
-
-
-
-
-
-			//travel somewhere aroun 45d untill a line is passed
-			//
-
-			// update the odometer position (example to follow:)
-			//odo.setPosition(new double [] {0.0, 0.0, 0.0}, new boolean [] {true, true, true});
-
-
-		//RISING_EDGE
-		} else {
-			/*
-			 * The robot should turn until it sees the wall, then look for the
-			 * "rising edges:" the points where it no longer sees the wall.
-			 * This is very similar to the FALLING_EDGE routine, but the robot
-			 * will face toward the wall for most of it.
-			 */
-
-			//rotate the robot clockwise until it sees a wall
-			while (getFilteredData() >= 50){
-				leftMotor.forward();
-				rightMotor.backward();
-			}
-
-			//keep rotating until until it sees no wall
-			while(getFilteredData() < 50 + MARGIN){
-				leftMotor.forward();
-				rightMotor.backward();
-			}
-
-			//stop motor
-			leftMotor.setSpeed(0);
-			rightMotor.setSpeed(0);
 			leftMotor.forward();
-			rightMotor.forward();
-			leftMotor.stop();
-			rightMotor.stop();
-
-			//save the first angle
-			clockwiseAngle = odo.getAng();
-
-			//set speed to ROTATION_SPEED
-			leftMotor.setSpeed(ROTATION_SPEED);
-			rightMotor.setSpeed(ROTATION_SPEED);
-
-			//rotate counterclockwise until it sees a wall
-			while(getFilteredData() >= 50){
-
-				leftMotor.backward();
-				rightMotor.forward();
-
-			}
-
-			//keep rotating until it sees no wall
-			while(getFilteredData() < 50 + MARGIN){
-
-				leftMotor.backward();
-				rightMotor.forward();
-
-			}
-
-			//stop motor
-			leftMotor.setSpeed(0);
-			rightMotor.setSpeed(0);
-			leftMotor.forward();
-			rightMotor.forward();
-			leftMotor.stop();
-			rightMotor.stop();
-
-			//set speed to rotation speed
-			leftMotor.setSpeed(ROTATION_SPEED);
-			rightMotor.setSpeed(ROTATION_SPEED);
-
-			//save the second angle
-			counterClockwiseAngle = odo.getAng();
-
-			//determine the new angle (using the formula from the tutorial)
-			if(clockwiseAngle > counterClockwiseAngle)
-			{
-				pos[2] = (odo.getAng() + (45- (clockwiseAngle + counterClockwiseAngle)/2));
-
-			}
-			else{
-				pos[2] = (odo.getAng() + (225- (clockwiseAngle + counterClockwiseAngle)/2));
-			}
-
-			//update the angle
-			odo.setPosition(pos, update);
-
-
+			rightMotor.backward();
 		}
+
+		while (usPoller.getClippedData(CLIP) < WALL_DIST + US_MARGIN) {
+
+			leftMotor.forward();
+			rightMotor.backward();
+		}
+
+		ActionController.stopMotors();
+		cw_angle = odometer.getAng();
+		ActionController.setSpeeds(ROTATE_SPEED, ROTATE_SPEED);
+
+		while (usPoller.getClippedData(CLIP) >= WALL_DIST) {
+
+			leftMotor.backward();
+			rightMotor.forward();
+		}
+
+		while (usPoller.getClippedData(CLIP) < WALL_DIST + US_MARGIN) {
+
+			leftMotor.backward();
+			rightMotor.forward();
+		}
+
+		ActionController.stopMotors();
+		ActionController.setSpeeds(ROTATE_SPEED, ROTATE_SPEED);
+		ccw_angle = odometer.getAng();
+
+		if (cw_angle > ccw_angle) {
+			position[2] = (odometer.getAng() + (45 - (cw_angle + ccw_angle) / 2));
+		}
+
+		else {
+			position[2] = (odometer.getAng() + (225 - (cw_angle + ccw_angle) / 2));
+		}
+
+		// set positions below
+		odometer.setPosition(position, update);
+
 	}
-	
+
 	private float getFilteredData() {
-		
-		//TODO Remove this and use the USPoller class
-		
-		usSensor.fetchSample(usData, 0);
-		float distance = usData[0]*100;
 
-		return distance;
+		// TODO Remove this and use the USPoller class
+
+//		usSensor.fetchSample(usData, 0);
+//		float distance = usData[0] * 100;
+//
+		return 0;
 	}
-
-
 }

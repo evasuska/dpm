@@ -1,5 +1,7 @@
 /**
- * 
+ * The LightLocalization class uses the LightSensor1
+ * to travel to the assigned "origin" (i.e. one of the corners)
+ * on the competition's grid field
  * 
  * @author Bogdan Dumitru
  * @author Eric Zimmermann
@@ -29,13 +31,18 @@ public class LightLocalization {
 	private final double BUFFER_DIST = 6/Math.sqrt(2);						//buffer distance (where we want to be before rotating)
 	
 	/**
-	 * Class constructor
-	 * @param odo
-	 * @param navigation
-	 * @param colorSensor
-	 * @param colorData
-	 * @param leftMotor
-	 * @param rightMotor
+	 * Class constructor specifying the different parameters this class
+	 * needs to works
+	 * 
+	 * @param odo the Odometer object to use
+	 * @param navigation the Navigation object to use
+	 * @param colorSensor the SampleProvider to use
+	 * @param colorData the sample data to use
+	 * @param leftMotor the left motor of the robot
+	 * @param rightMotor the right motor of the robot
+	 * 
+	 * @see Odometer
+	 * @see Navigation
 	 */
 	public LightLocalization(Odometer odo, Navigation navigation, SampleProvider colorSensor, float[] colorData, 
 			EV3LargeRegulatedMotor leftMotor, EV3LargeRegulatedMotor rightMotor) {
@@ -48,7 +55,11 @@ public class LightLocalization {
 	}
 	
 	/**
+	 * Localizes the robot when it gets to the assumed (0 , 0) coordinate
+	 * using the LightSensor1 to detect floor lines while doing a full circle
 	 * 
+	 * @see LightPoller
+	 * @see Navigation
 	 */
 	public void localize() {
 		//array for the position of the robot
