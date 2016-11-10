@@ -1,4 +1,4 @@
-package src.algorithm;
+package algorithm;
 
 public class LightLocalization {
 

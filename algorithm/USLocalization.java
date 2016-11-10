@@ -1,4 +1,7 @@
-package src.algorithm;
+package algorithm;
+
+import component.Odometer;
+import lejos.robotics.SampleProvider;
 
 public class USLocalization {
 	public enum LocalizationType { FALLING_EDGE, RISING_EDGE };
