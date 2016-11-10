@@ -1,11 +1,23 @@
+/**
+ * The Navigation class moves the robot around the
+ * competition field, updates the odometer, and checks
+ * for obstacles
+ * 
+ * @author Bogdan Dumitru
+ * @author Eric Zimmermann
+ * @version 1.0.0
+ * @since 0.1.0
+ */
+
 package algorithm;
 
 import component.ActionController;
 import component.Odometer;
 import component.USPoller;
 import lejos.hardware.motor.EV3LargeRegulatedMotor;
+import lejos.utility.TimerListener;
 
-public class Navigation extends Thread{
+public class Navigation implements TimerListener{
 
 	//Speed variables
 	
@@ -15,15 +27,21 @@ public class Navigation extends Thread{
 	final static int DIST_ERR = 0000;
 	
 	private Odometer odometer;
-	private ActionController control;
 	private USPoller usPoller;
 	private EV3LargeRegulatedMotor leftMotor, rightMotor;
 	
-	
-	public Navigation(Odometer odometer, ActionController control, USPoller usPoller){
+	/**
+	 * Class constructor specifying the Odometer and the USPoller to be used
+	 * 
+	 * @param odometer the Odometer object used
+	 * @param usPoller the USPoller object used
+	 * 
+	 * @see Odometer
+	 * @see USPoller
+	 */
+	public Navigation(Odometer odometer, USPoller usPoller){
 		
 		this.odometer = odometer;
-		this.control = control;
 		this.usPoller = usPoller;
 		
 		EV3LargeRegulatedMotor[] motors = this.odometer.getMotors();
@@ -34,13 +52,15 @@ public class Navigation extends Thread{
 		this.rightMotor.setAcceleration(ACCELERATION);
 	}
 	
-	public void run(){
-		//do something while true (thread states inside)
-	}
-	
-	//in degrees
+	/**
+	 * Wraps the angle to fit within 0 and 360 degrees
+	 * 
+	 * @param angle the angle to be wrapped
+	 * @return the new angle value between 0 and 360
+	 */
 	public double wrapAngle(double angle){
-
+		
+		//TODO Might be deprecated because of the fixDegreeAngle method
 		if (angle < 0)
 		{ angle += 360;	}
 
@@ -50,13 +70,29 @@ public class Navigation extends Thread{
 		return angle;
 	}
 	
-	//in rads to rotations needed
+	/**
+	 * Converts the angle (needs to be explained)
+	 * @param radius
+	 * @param width
+	 * @param angle
+	 * @return
+	 */
 	public int convertAngle( double radius, double width, double angle){
 
+		//TODO ERIC WTF DOES THIS DO
 		return (int)((width * angle / 2.0) / (radius));
 	}
 
-	//in rads
+	/**
+	 * Calculates the angle to turn to based on the robot's
+	 * position and the desired destination position
+	 * 
+	 * @param initial_x the robot's X coordinate
+	 * @param initial_y the robot's Y coordinate
+	 * @param final_x the destination's X coordinate
+	 * @param final_y the destination's Y coordinate
+	 * @return the angle, in radians, to turn to
+	 */
 	public double calculateAngle(double initial_x, double initial_y, double final_x, double final_y){
 
 		double delta_x = (final_x - initial_x);
@@ -75,11 +111,15 @@ public class Navigation extends Thread{
 			{ return Math.atan(delta_y / delta_x); }
 	}
 
-	//in rads
+	/**
+	 * Rotates the robot to the desired angle
+	 * 
+	 * @param target_angle the angle to rotate to
+	 */
 	public void turnTo(double target_angle){
 
-		control.stopMotors();
-		control.setSpeeds(ROTATION_SPEED, ROTATION_SPEED);
+		ActionController.stopMotors();
+		ActionController.setSpeeds(ROTATION_SPEED, ROTATION_SPEED);
 
 		double delta_theta = Math.toDegrees(target_angle - odometer.getAng());
 		int turning_angle =convertAngle(RADIUS, TRACK, delta_theta);
@@ -107,10 +147,17 @@ public class Navigation extends Thread{
 		}
 	}
 	
+	/**
+	 * Moves the robot to the desired coordinate in the grid field
+	 * by making the motors advance
+	 * 
+	 * @param destination_x the X coordinate to travel to
+	 * @param destination_y the Y coordinate to travel to
+	 */
 	public void travelTo(double destination_x, double destination_y){
 
 		turnTo(calculateAngle(odometer.getX(), odometer.getY(), destination_x, destination_y));
-		control.setSpeeds(FORWARD_SPEED, FORWARD_SPEED);
+		ActionController.setSpeeds(FORWARD_SPEED, FORWARD_SPEED);
 
 		while ((Math.abs(odometer.getX() - destination_x) > DIST_ERR) || (Math.abs(odometer.getY() - destination_y) > DIST_ERR)){
 
@@ -118,7 +165,13 @@ public class Navigation extends Thread{
 			rightMotor.backward();
 		}
 		
-		control.stopMotors();
+		ActionController.stopMotors();
+	}
+
+	@Override
+	public void timedOut() {
+		// TODO Auto-generated method stub
+		
 	}
 
 	//might have to convert all methods to work in degrees

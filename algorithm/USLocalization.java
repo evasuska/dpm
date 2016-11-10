@@ -1,6 +1,11 @@
+/**
+ * The USLocaliztion class 
+ */
+
 package algorithm;
 
 import component.Odometer;
+import lejos.hardware.motor.EV3LargeRegulatedMotor;
 import lejos.robotics.SampleProvider;
 
 public class USLocalization {
@@ -11,14 +16,22 @@ public class USLocalization {
 
 	//for constructor
 	private Odometer odo;
-	private Navigator navigation;
+	private Navigation navigation;
 	private SampleProvider usSensor;
 	private float[] usData;
 	private LocalizationType locType;
 	private EV3LargeRegulatedMotor leftMotor;
 	private EV3LargeRegulatedMotor rightMotor;
 
-	//constructor
+	/**
+	 * Class constructor that specifies the Odometer,
+	 * @param odo
+	 * @param usSensor
+	 * @param usData
+	 * @param locType
+	 * @param leftMotor
+	 * @param rightMotor
+	 */
 	public USLocalization(Odometer odo, SampleProvider usSensor, float[] usData, LocalizationType locType,
 			EV3LargeRegulatedMotor leftMotor, EV3LargeRegulatedMotor rightMotor) {
 		this.odo = odo;
@@ -29,7 +42,14 @@ public class USLocalization {
 		this.rightMotor = rightMotor;
 	}
 
-	public void doLocalization() {
+	/**
+	 * Localize the robot to coordinate (0 , 0)
+	 * with a heading of 0 by using the USPoller
+	 * to detect Rising Edge
+	 */
+	public void localize() {
+		//TODO Use Eric's code with Bogdan's architecture for this method
+		
 		//array for the position of the robot
 		double [] pos = new double [3];
 		pos[0] = odo.getX();
@@ -133,7 +153,7 @@ public class USLocalization {
 			odo.setPosition(pos, update);
 
 			//turn to 0 degrees
-			navigation.turnTo(0, true);
+			navigation.turnTo(0);
 
 
 
@@ -230,9 +250,11 @@ public class USLocalization {
 
 		}
 	}
-
-	//fetch sample, returns the distance detected by the US sensor
+	
 	private float getFilteredData() {
+		
+		//TODO Remove this and use the USPoller class
+		
 		usSensor.fetchSample(usData, 0);
 		float distance = usData[0]*100;
 

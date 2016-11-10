@@ -60,7 +60,7 @@ public class ActionController implements TimerListener {
 	/**
 	 * Halts the motors
 	 */
-	public void stopMotors() {
+	public static void stopMotors() {
 
 		setSpeeds(0,0);
 
